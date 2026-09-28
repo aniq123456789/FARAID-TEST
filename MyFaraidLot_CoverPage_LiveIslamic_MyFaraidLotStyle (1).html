@@ -12477,16 +12477,16 @@ body.cover-active{
              */
             const drawing = {
                 x: 82,
-                y: 245,
-                w: 760,
-                h: 395
+                y: 230,
+                w: 700,
+                h: 445
             };
 
             const tableBox = {
-                x: 900,
-                y: 245,
-                w: 410,
-                h: 395
+                x: 820,
+                y: 230,
+                w: 490,
+                h: 445
             };
 
             const geomWidth = geometry.maxU - geometry.minU;
@@ -12759,6 +12759,7 @@ body.cover-active{
                 return (low + high) / 2;
             }
 
+
             function drawHeirSummaryTable(
                 x,
                 y,
@@ -12770,6 +12771,15 @@ body.cover-active{
 
                 ctx.save();
 
+                const titleH = 38;
+                const headerH = 30;
+                const reserveH = 102;
+                const bottomPad = 10;
+                const fractionSum =
+                    heirs.reduce(function(sum, item) {
+                        return sum + Math.max(0, Number(item.peratus) || 0);
+                    }, 0) || 1;
+
                 ctx.fillStyle = "#ffffff";
                 ctx.strokeStyle = "#1f2937";
                 ctx.lineWidth = 1.2;
@@ -12777,161 +12787,118 @@ body.cover-active{
                 ctx.strokeRect(x, y, w, h);
 
                 ctx.fillStyle = "#eef4f7";
-                ctx.fillRect(x, y, w, 38);
+                ctx.fillRect(x, y, w, titleH);
+                ctx.strokeRect(x, y, w, titleH);
 
                 ctx.fillStyle = "#111827";
                 ctx.font = "bold 15px Arial, sans-serif";
                 ctx.textAlign = "left";
                 ctx.textBaseline = "middle";
                 ctx.fillText(
-                    "JADUAL PEMBAHAGIAN WARIS",
+                    "PETUNJUK PEMBAHAGIAN WARIS",
                     x + 12,
-                    y + 19
+                    y + titleH / 2
                 );
 
-                const headerY = y + 38;
-                const headerH = 32;
+                const headerY = y + titleH;
+                const tableW = w;
+                const cols = [
+                    { key: "no", label: "No.", width: 48 },
+                    { key: "name", label: "Nama Waris", width: 174 },
+                    { key: "share", label: "Saham", width: 92 },
+                    { key: "area", label: "Luas (m²)", width: 106 },
+                    { key: "status", label: "Status", width: tableW - (48 + 174 + 92 + 106) }
+                ];
 
                 ctx.fillStyle = "#f8fafc";
                 ctx.fillRect(x, headerY, w, headerH);
-
-                const cols = [
-                    { key:"no",      label:"Bil.",     width:42 },
-                    { key:"name",    label:"Bahagian", width:128 },
-                    { key:"area",    label:"Luas",     width:82 },
-                    { key:"pct",     label:"Peratus",  width:72 },
-                    { key:"status",  label:"Status",   width:86 }
-                ];
+                ctx.strokeStyle = "#94a3b8";
+                ctx.strokeRect(x, headerY, w, headerH);
 
                 let cx = x;
-
                 ctx.font = "bold 11px Arial, sans-serif";
                 ctx.fillStyle = "#111827";
                 ctx.textAlign = "center";
 
                 cols.forEach(function(col) {
-                    ctx.strokeStyle = "#94a3b8";
-                    ctx.strokeRect(
-                        cx,
-                        headerY,
-                        col.width,
-                        headerH
-                    );
-                    ctx.fillText(
-                        col.label,
-                        cx + col.width / 2,
-                        headerY + headerH / 2
-                    );
+                    ctx.strokeRect(cx, headerY, col.width, headerH);
+                    ctx.fillText(col.label, cx + col.width / 2, headerY + headerH / 2);
                     cx += col.width;
                 });
 
+                const bodyAvail = h - titleH - headerH - reserveH - bottomPad - 10;
                 const rows = Math.max(1, heirs.length);
-                const availableH = h - 38 - headerH - 8;
-                const rowH = Math.max(
-                    30,
-                    Math.min(48, availableH / rows)
-                );
-
+                const rowH = Math.max(32, Math.min(44, bodyAvail / rows));
                 let rowY = headerY + headerH;
 
                 heirs.forEach(function(waris, index) {
-
-                    if (rowY + rowH > y + h - 5) {
-                        return;
-                    }
+                    const fractionRaw = Math.max(0, Number(waris.peratus) || 0);
+                    const fraction = fractionRaw / fractionSum;
+                    const area = usableArea * fraction;
+                    const values = [
+                        String(index + 1),
+                        String(waris.nama || ("Waris " + (index + 1))),
+                        (fraction * 100).toFixed(2) + "%",
+                        Number.isFinite(area) ? area.toFixed(2) : "-",
+                        "Diagihkan"
+                    ];
 
                     if (index % 2 === 1) {
                         ctx.fillStyle = "#fbfdfe";
                         ctx.fillRect(x, rowY, w, rowH);
                     }
 
-                    const fractionRaw =
-                        Math.max(
-                            0,
-                            Number(waris.peratus) || 0
-                        );
-
-                    const fractionSum =
-                        heirs.reduce(function(sum, h) {
-                            return (
-                                sum +
-                                Math.max(
-                                    0,
-                                    Number(h.peratus) || 0
-                                )
-                            );
-                        }, 0) || 1;
-
-                    const fraction =
-                        fractionRaw / fractionSum;
-
-                    const area =
-                        usableArea * fraction;
-
-                    const values = [
-                        "B" +
-                            String(index + 1).padStart(2, "0"),
-                        String(waris.nama || "Waris"),
-                        Number.isFinite(area)
-                            ? area.toFixed(2) + " m²"
-                            : "-",
-                        (fraction * 100).toFixed(2) + "%",
-                        "Menerima"
-                    ];
-
                     cx = x;
-
                     cols.forEach(function(col, ci) {
-
                         ctx.strokeStyle = "#cbd5e1";
-                        ctx.strokeRect(
-                            cx,
-                            rowY,
-                            col.width,
-                            rowH
-                        );
-
+                        ctx.strokeRect(cx, rowY, col.width, rowH);
                         ctx.fillStyle = "#111827";
-                        ctx.font =
-                            ci === 0 || ci === 1
-                                ? "bold 10.5px Arial, sans-serif"
-                                : "10px Arial, sans-serif";
-
-                        ctx.textAlign =
-                            ci === 1
-                                ? "left"
-                                : "center";
-
-                        const tx =
-                            ci === 1
-                                ? cx + 6
-                                : cx + col.width / 2;
-
+                        ctx.font = ci === 1 ? "bold 10.5px Arial, sans-serif" : "10px Arial, sans-serif";
+                        ctx.textAlign = ci === 1 ? "left" : "center";
                         let text = values[ci];
-
-                        /*
-                         * Ringkaskan nama yang sangat panjang supaya
-                         * tidak keluar dari jadual.
-                         */
-                        if (ci === 1 && text.length > 18) {
-                            text =
-                                text.substring(0, 17) + "…";
+                        if (ci === 1 && text.length > 22) {
+                            text = text.substring(0, 21) + "…";
                         }
-
-                        ctx.fillText(
-                            text,
-                            tx,
-                            rowY + rowH / 2
-                        );
-
+                        const tx = ci === 1 ? cx + 6 : cx + col.width / 2;
+                        ctx.fillText(text, tx, rowY + rowH / 2);
                         cx += col.width;
                     });
 
                     rowY += rowH;
                 });
 
+                const reserveY = y + h - reserveH;
+                ctx.fillStyle = "#f8fafc";
+                ctx.strokeStyle = "#94a3b8";
+                ctx.fillRect(x, reserveY, w, reserveH);
+                ctx.strokeRect(x, reserveY, w, reserveH);
+
+                ctx.fillStyle = "#111827";
+                ctx.font = "bold 12px Arial, sans-serif";
+                ctx.textAlign = "left";
+                ctx.fillText("MAKLUMAT RIZAB JALAN", x + 12, reserveY + 18);
+
+                ctx.font = "10.5px Arial, sans-serif";
+                const reserveLength =
+                    roadInfo && roadInfo.widthM > 0
+                        ? (roadInfo.reserveArea / roadInfo.widthM)
+                        : 0;
+                const reserveLines = roadInfo ? [
+                    "Sisi rizab : " + roadInfo.side,
+                    "Lebar      : " + roadInfo.widthM.toFixed(2) + " m",
+                    "Panjang    : " + reserveLength.toFixed(2) + " m",
+                    "Luas       : " + roadInfo.reserveArea.toFixed(2) + " m²"
+                ] : [
+                    "Rizab jalan tidak dapat dibentuk daripada geometri lot."
+                ];
+
+                reserveLines.forEach(function(line, idx) {
+                    ctx.fillText(line, x + 14, reserveY + 39 + (idx * 15));
+                });
+
                 ctx.restore();
             }
+
 
             /*
              * Caption.
@@ -12957,7 +12924,7 @@ body.cover-active{
             ctx.font = "10px Arial, sans-serif";
 
             ctx.fillText(
-                "GARISAN LUAR = SEMPADAN LOT ASAL   |   PETAK B01, B02... = CADANGAN PEMBAHAGIAN WARIS",
+                "GARISAN LUAR = SEMPADAN LOT ASAL   |   NOMBOR 1, 2, 3... MERUJUK KEPADA JADUAL PETUNJUK DI SEBELAH KANAN",
                 drawing.x,
                 drawing.y - 11
             );
@@ -13079,65 +13046,25 @@ body.cover-active{
                     ctx.strokeStyle = "#374151";
                     ctx.lineWidth = 1.25;
                     ctx.stroke();
-
                     /*
-                     * Label sangat ringkas di dalam petak.
-                     * Semua butiran lain berada dalam jadual kanan.
+                     * Di dalam lot hanya paparkan nombor ringkas.
+                     * Semua maklumat waris diletakkan di luar lot
+                     * dalam jadual petunjuk di sebelah kanan.
                      */
-                    const centroid = {
-                        u:
-                            (
-                                leftA.u +
-                                rightA.u +
-                                rightB.u +
-                                leftB.u
-                            ) / 4,
-                        v:
-                            (
-                                leftA.v +
-                                rightA.v +
-                                rightB.v +
-                                leftB.v
-                            ) / 4
-                    };
-
-                    const cp = toCanvasPoint(centroid);
-
                     ctx.save();
-                    ctx.fillStyle = "rgba(255,255,255,.88)";
-                    ctx.strokeStyle = "#64748b";
-                    ctx.lineWidth = 0.8;
-
-                    const boxW = 50;
-                    const boxH = 26;
-
-                    ctx.fillRect(
-                        cp.x - boxW / 2,
-                        cp.y - boxH / 2,
-                        boxW,
-                        boxH
-                    );
-
-                    ctx.strokeRect(
-                        cp.x - boxW / 2,
-                        cp.y - boxH / 2,
-                        boxW,
-                        boxH
-                    );
+                    ctx.beginPath();
+                    ctx.fillStyle = "rgba(255,255,255,.96)";
+                    ctx.strokeStyle = "#475569";
+                    ctx.lineWidth = 1;
+                    ctx.arc(cp.x, cp.y, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
 
                     ctx.fillStyle = "#111827";
-                    ctx.font =
-                        "bold 12px Arial, sans-serif";
+                    ctx.font = "bold 12px Arial, sans-serif";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
-
-                    ctx.fillText(
-                        "B" +
-                        String(index + 1).padStart(2, "0"),
-                        cp.x,
-                        cp.y
-                    );
-
+                    ctx.fillText(String(index + 1), cp.x, cp.y + 0.5);
                     ctx.restore();
 
                     t0 = t1;
