@@ -4820,34 +4820,6 @@ body.cover-active{
                             <span id="res-luas" class="lot-info-value">-</span>
                         </div>
                     </div>
-
-                    <div class="lot-info-location-grid">
-                        <div class="lot-info-item">
-                            <span class="lot-info-label">Negeri</span>
-                            <span id="res-negeri" class="lot-info-value">-</span>
-                        </div>
-
-                        <div class="lot-info-item">
-                            <span class="lot-info-label">Daerah</span>
-                            <span id="res-daerah" class="lot-info-value">-</span>
-                        </div>
-
-                        <div class="lot-info-item">
-                            <span class="lot-info-label">Mukim</span>
-                            <span id="res-mukim" class="lot-info-value">-</span>
-                        </div>
-                    </div>
-
-                    <div class="lot-info-item owner">
-                        <span class="lot-info-label">Pemilik Berdaftar</span>
-                        <span id="res-owner" class="lot-info-value">-</span>
-                    </div>
-
-                    <div class="lot-info-hint">
-                        <i class="fas fa-mouse-pointer"></i>
-                        Klik lot lain pada peta untuk memaparkan maklumat lot tersebut.
-                    </div>
-                </div>
             </aside>
 
             <!-- Nilai luas lot dikekalkan untuk digunakan oleh halaman Kiraan Faraid. -->
@@ -4969,11 +4941,6 @@ body.cover-active{
             const lot =
                 props['NO LOT'] || "-";
 
-            const owner =
-                props['tsp — pe'] ||
-                props['Pemilik'] ||
-                "Jabatan Geomatik (PUO)";
-
             const rawArea =
                 props['AREA']
                     ? parseFloat(props['AREA'])
@@ -4984,34 +4951,14 @@ body.cover-active{
                     ? rawArea.toFixed(3) + " m²"
                     : "-";
 
-            const negeri =
-                props['NEGERI'] ||
-                props['Negeri'] ||
-                "-";
-
-            const daerah =
-                props['DAERAH'] ||
-                props['Daerah'] ||
-                "-";
-
-            const mukim =
-                props['MUKIM'] ||
-                props['Mukim'] ||
-                "-";
-
             const setText = (id, value) => {
                 const el = document.getElementById(id);
                 if (el) el.innerText = value;
             };
 
             setText('res-no-lot', lot);
-            setText('res-owner', owner);
-            setText('res-luas', areaFormatted);
-            setText('res-negeri', negeri);
-            setText('res-daerah', daerah);
-            setText('res-mukim', mukim);
-
-            if (Number.isFinite(rawArea)) {
+setText('res-luas', areaFormatted);
+if (Number.isFinite(rawArea)) {
                 const luasInput =
                     document.getElementById('luasTanah');
 
