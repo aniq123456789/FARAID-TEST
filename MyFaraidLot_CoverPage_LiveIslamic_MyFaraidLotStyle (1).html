@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <title>MyFaraidLot - Web Pengiraan dan Pembahagian Lot Tanah</title>
+<!-- VERSI PELAN KEMAS: label waris dipindahkan keluar lot -->
 
     <!-- CSS Resources -->
     <link rel="stylesheet" href="css/leaflet.css">
@@ -11135,7 +11136,6 @@ body.cover-active{
             offsetX,
             offsetY
         ) {
-
             if (
                 !roadInfo ||
                 !roadInfo.reserveRings ||
@@ -11147,7 +11147,6 @@ body.cover-active{
             ctx.save();
 
             roadInfo.reserveRings.forEach(function(ring) {
-
                 drawPolygonPath(
                     ctx,
                     ring,
@@ -11157,62 +11156,13 @@ body.cover-active{
                     offsetY
                 );
 
-                /* Paparan rizab seperti jalur kadaster pada gambar rujukan:
-                   kosong/kemas, satu koridor memanjang dan sempadan jelas. */
-                ctx.fillStyle = "rgba(210, 218, 225, 0.42)";
+                ctx.fillStyle = "rgba(203, 213, 225, 0.72)";
                 ctx.fill();
 
-                ctx.strokeStyle = "#0b57ff";
-                ctx.lineWidth = 2.1;
+                ctx.strokeStyle = "#2563eb";
+                ctx.lineWidth = 1.8;
                 ctx.stroke();
             });
-
-            const centroid =
-                getPieceCentroid(roadInfo.reserveRings);
-
-            if (centroid) {
-
-                const labelX =
-                    offsetX +
-                    (centroid.u - originalGeometry.minU) *
-                    scale;
-
-                const labelY =
-                    offsetY +
-                    (originalGeometry.maxV - centroid.v) *
-                    scale;
-
-                paDrawTextBox(
-                    ctx,
-                    labelX,
-                    labelY,
-                    [
-                        {
-                            text: "RIZAB JALAN",
-                            bold: true
-                        },
-                        {
-                            text:
-                                roadInfo.widthM.toFixed(2) +
-                                " m • " +
-                                roadInfo.side
-                        },
-                        {
-                            text:
-                                "± " +
-                                roadInfo.reserveArea.toFixed(2) +
-                                " m²"
-                        }
-                    ],
-                    {
-                        font: "8px Arial, sans-serif",
-                        fontBold: "bold 9px Arial, sans-serif",
-                        lineH: 12,
-                        padX: 5,
-                        padY: 4
-                    }
-                );
-            }
 
             ctx.restore();
         }
@@ -12393,25 +12343,20 @@ body.cover-active{
 
             /*
              * =========================================================
-             * PELAN PEMBAHAGIAN LOT - PAPARAN KEMAS
+             * PELAN LOT KEMAS
              * =========================================================
-             * Perubahan hanya pada paparan pelan:
-             * 1. Sempadan lot asal kekal mengikut geometri WebGIS.
-             * 2. Bearing dan jarak dipaparkan pada setiap sisi lot asal.
-             * 3. Rizab jalan kekal DI DALAM lot.
-             * 4. Bahagian waris dipaparkan sebagai petak 4 sisi
-             *    (quadrilateral) yang kemas.
-             * 5. Butiran waris dipindahkan ke jadual di sebelah lot
-             *    untuk mengelakkan tulisan bertindih.
+             * Dalam lot:
+             * - sempadan lot
+             * - garisan pembahagian
+             * - nombor 1, 2, 3...
+             * - rizab jalan (tanpa kotak teks)
              *
-             * NOTA RIZAB JALAN:
-             * Lebar sebenar hendaklah mengikut atribut/pelan diluluskan
-             * dan pihak berkuasa berkaitan. Nilai lalai projek hanyalah
-             * simulasi apabila atribut lebar tidak tersedia.
+             * Di luar lot:
+             * - jadual petunjuk waris
+             * - maklumat rizab jalan
              */
-
-            if (canvas.width !== 1400) canvas.width = 1400;
-            if (canvas.height !== 980) canvas.height = 980;
+            canvas.width = 1400;
+            canvas.height = 920;
 
             const ctx = canvas.getContext("2d");
             const W = canvas.width;
@@ -12421,72 +12366,64 @@ body.cover-active{
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, W, H);
 
-            /* Bingkai helaian. */
-            ctx.strokeStyle = "#111";
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(22, 22, W - 44, H - 44);
-            ctx.lineWidth = 0.55;
-            ctx.strokeRect(30, 30, W - 60, H - 60);
-
             const meta = paGetLotMeta(selectedLayer);
             const geometry = prepareLotGeometry(selectedLayer);
             const geoRings = extractLotRings(selectedLayer);
-
-            paDrawTitleAndNorth(ctx, W, meta);
-            paDrawSimulationStamp(ctx, W);
 
             if (!geometry) {
                 paDrawFallback(ctx, W, H, senaraiWaris, meta);
                 return;
             }
 
-            const roadInfo =
-                createRoadReserveGeometry(
-                    geometry,
-                    selectedLayer
-                );
+            const roadInfo = createRoadReserveGeometry(geometry, selectedLayer);
 
             const distributionGeometry =
                 roadInfo && roadInfo.usableGeometry
                     ? roadInfo.usableGeometry
                     : geometry;
 
-            meta.roadReserveWidth =
-                roadInfo ? roadInfo.widthM : 0;
+            meta.roadReserveWidth = roadInfo ? roadInfo.widthM : 0;
+            meta.roadReserveArea = roadInfo ? roadInfo.reserveArea : 0;
+            meta.distributableArea = roadInfo ? roadInfo.usableArea : geometry.totalArea;
+            meta.roadReserveSide = roadInfo ? roadInfo.side : "-";
+            meta.roadReserveSource = roadInfo ? roadInfo.source : "-";
 
-            meta.roadReserveArea =
-                roadInfo ? roadInfo.reserveArea : 0;
+            /* ---------- TAJUK ---------- */
+            ctx.save();
+            ctx.fillStyle = "#111827";
+            ctx.textAlign = "left";
+            ctx.font = "bold 20px Arial, sans-serif";
+            ctx.fillText("PELAN PEMBAHAGIAN LOT FARAID", 50, 45);
 
-            meta.distributableArea =
-                roadInfo
-                    ? roadInfo.usableArea
-                    : geometry.totalArea;
+            ctx.font = "11px Arial, sans-serif";
+            ctx.fillStyle = "#475569";
+            ctx.fillText(
+                "Lot " + meta.lot +
+                (meta.area ? "  •  Luas asal " + meta.area.toFixed(2) + " m²" : ""),
+                50,
+                67
+            );
 
-            meta.roadReserveSide =
-                roadInfo ? roadInfo.side : "-";
+            ctx.fillText(
+                "Nombor di dalam lot merujuk kepada jadual petunjuk di sebelah kanan.",
+                50,
+                86
+            );
+            ctx.restore();
 
-            meta.roadReserveSource =
-                roadInfo ? roadInfo.source : "-";
-
-            /*
-             * =========================================================
-             * SUSUN ATUR
-             * =========================================================
-             * Kiri  : lot + bearing/jarak + rizab jalan.
-             * Kanan : jadual ringkas waris.
-             */
+            /* ---------- SUSUN ATUR ---------- */
             const drawing = {
-                x: 82,
-                y: 230,
-                w: 700,
-                h: 445
+                x: 55,
+                y: 125,
+                w: 760,
+                h: 640
             };
 
-            const tableBox = {
-                x: 820,
-                y: 230,
+            const legend = {
+                x: 855,
+                y: 125,
                 w: 490,
-                h: 445
+                h: 640
             };
 
             const geomWidth = geometry.maxU - geometry.minU;
@@ -12500,464 +12437,22 @@ body.cover-active{
             const drawWidth = geomWidth * scale;
             const drawHeight = geomHeight * scale;
 
-            const offsetX =
-                drawing.x +
-                (drawing.w - drawWidth) / 2;
+            const offsetX = drawing.x + (drawing.w - drawWidth) / 2;
+            const offsetY = drawing.y + (drawing.h - drawHeight) / 2;
 
-            const offsetY =
-                drawing.y +
-                (drawing.h - drawHeight) / 2;
-
-            function toCanvasPoint(p) {
-                return {
-                    x:
-                        offsetX +
-                        (p.u - geometry.minU) *
-                        scale,
-                    y:
-                        offsetY +
-                        (geometry.maxV - p.v) *
-                        scale
-                };
-            }
-
-            function lerpPoint(a, b, t) {
-                return {
-                    u: a.u + (b.u - a.u) * t,
-                    v: a.v + (b.v - a.v) * t
-                };
-            }
-
-            function drawQuadPath(quad) {
-                if (!quad || quad.length !== 4) return;
-                const p0 = toCanvasPoint(quad[0]);
-                ctx.beginPath();
-                ctx.moveTo(p0.x, p0.y);
-                for (let i = 1; i < quad.length; i++) {
-                    const p = toCanvasPoint(quad[i]);
-                    ctx.lineTo(p.x, p.y);
-                }
-                ctx.closePath();
-            }
-
-            /*
-             * Dapatkan satu quadrilateral yang kemas di dalam kawasan
-             * boleh diagih. Bagi lot 4 sisi, bentuk ini mengikuti
-             * sisi kawasan lot selepas rizab jalan.
-             *
-             * Untuk polygon yang mempunyai lebih banyak vertex,
-             * dua keratan rentas dalaman digunakan supaya petak waris
-             * kekal berada dalam kawasan boleh diagih.
-             */
-            function getLineSpanAtDistance(ring, tangent, normal, c, d) {
-
-                const values = [];
-
-                function sd(p) {
-                    return (p.u * normal.x + p.v * normal.y) - c;
-                }
-
-                function sCoord(p) {
-                    return p.u * tangent.x + p.v * tangent.y;
-                }
-
-                for (let i = 0; i < ring.length; i++) {
-
-                    const a = ring[i];
-                    const b = ring[(i + 1) % ring.length];
-
-                    const da = sd(a);
-                    const db = sd(b);
-
-                    if (
-                        (d >= Math.min(da, db) - 1e-9) &&
-                        (d <= Math.max(da, db) + 1e-9)
-                    ) {
-                        const denom = db - da;
-
-                        if (Math.abs(denom) < 1e-12) {
-                            if (Math.abs(d - da) < 1e-8) {
-                                values.push(sCoord(a));
-                                values.push(sCoord(b));
-                            }
-                        } else {
-                            const t = (d - da) / denom;
-
-                            if (t >= -1e-9 && t <= 1 + 1e-9) {
-                                const u = a.u + (b.u - a.u) * t;
-                                const v = a.v + (b.v - a.v) * t;
-                                values.push(
-                                    u * tangent.x +
-                                    v * tangent.y
-                                );
-                            }
-                        }
-                    }
-                }
-
-                values.sort((a, b) => a - b);
-
-                if (values.length < 2) return null;
-
-                return {
-                    min: values[0],
-                    max: values[values.length - 1]
-                };
-            }
-
-            function getCleanDistributionQuad() {
-
-                const ring =
-                    distributionGeometry.rings &&
-                    distributionGeometry.rings.length
-                        ? distributionGeometry.rings[0]
-                        : null;
-
-                if (!ring || ring.length < 3) return null;
-
-                let tangent;
-                let normal;
-                let c;
-
-                if (
-                    roadInfo &&
-                    roadInfo.frontage &&
-                    Number.isFinite(roadInfo.frontage.tx) &&
-                    Number.isFinite(roadInfo.frontage.ty)
-                ) {
-                    tangent = {
-                        x: roadInfo.frontage.tx,
-                        y: roadInfo.frontage.ty
-                    };
-
-                    normal = {
-                        x: roadInfo.frontage.nx,
-                        y: roadInfo.frontage.ny
-                    };
-
-                    c = roadInfo.frontage.c;
-                } else {
-                    tangent = { x: 1, y: 0 };
-                    normal = { x: 0, y: 1 };
-                    c = 0;
-                }
-
-                const ds = ring.map(function(p) {
-                    return (
-                        p.u * normal.x +
-                        p.v * normal.y
-                    ) - c;
-                });
-
-                const minD = Math.min.apply(null, ds);
-                const maxD = Math.max.apply(null, ds);
-                const depth = maxD - minD;
-
-                if (!(depth > 0)) return null;
-
-                /*
-                 * Sedikit inset dari hujung kawasan boleh diagih untuk
-                 * memastikan petak 4 sisi tidak keluar daripada polygon.
-                 */
-                const d0 = minD + depth * 0.035;
-                const d1 = maxD - depth * 0.035;
-
-                const span0 =
-                    getLineSpanAtDistance(
-                        ring,
-                        tangent,
-                        normal,
-                        c,
-                        d0
-                    );
-
-                const span1 =
-                    getLineSpanAtDistance(
-                        ring,
-                        tangent,
-                        normal,
-                        c,
-                        d1
-                    );
-
-                if (!span0 || !span1) return null;
-
-                /*
-                 * Margin sisi kecil untuk paparan yang lebih kemas.
-                 */
-                const pad0 = (span0.max - span0.min) * 0.035;
-                const pad1 = (span1.max - span1.min) * 0.035;
-
-                const s0L = span0.min + pad0;
-                const s0R = span0.max - pad0;
-                const s1L = span1.min + pad1;
-                const s1R = span1.max - pad1;
-
-                function makePoint(s, d) {
-                    const nValue = d + c;
-                    return {
-                        u:
-                            tangent.x * s +
-                            normal.x * nValue,
-                        v:
-                            tangent.y * s +
-                            normal.y * nValue
-                    };
-                }
-
-                return [
-                    makePoint(s0L, d0), /* kiri dekat jalan */
-                    makePoint(s0R, d0), /* kanan dekat jalan */
-                    makePoint(s1R, d1), /* kanan jauh jalan */
-                    makePoint(s1L, d1)  /* kiri jauh jalan */
-                ];
-            }
-
-            function quadArea(quad) {
-                return polygonAreaUV(quad);
-            }
-
-            /*
-             * Cari parameter t supaya luas terkumpul daripada sisi
-             * dekat jalan mencapai peratus yang dikehendaki.
-             */
-            function findQuadCutT(baseQuad, targetFraction) {
-
-                const L0 = baseQuad[0];
-                const R0 = baseQuad[1];
-                const R1 = baseQuad[2];
-                const L1 = baseQuad[3];
-
-                const total = Math.max(quadArea(baseQuad), 1e-9);
-
-                let low = 0;
-                let high = 1;
-
-                for (let k = 0; k < 45; k++) {
-
-                    const mid = (low + high) / 2;
-
-                    const Lt = lerpPoint(L0, L1, mid);
-                    const Rt = lerpPoint(R0, R1, mid);
-
-                    const partial = [
-                        L0,
-                        R0,
-                        Rt,
-                        Lt
-                    ];
-
-                    const f = quadArea(partial) / total;
-
-                    if (f < targetFraction) {
-                        low = mid;
-                    } else {
-                        high = mid;
-                    }
-                }
-
-                return (low + high) / 2;
-            }
-
-
-            function drawHeirSummaryTable(
-                x,
-                y,
-                w,
-                h,
-                heirs,
-                usableArea
-            ) {
-
-                ctx.save();
-
-                const titleH = 38;
-                const headerH = 30;
-                const reserveH = 102;
-                const bottomPad = 10;
-                const fractionSum =
-                    heirs.reduce(function(sum, item) {
-                        return sum + Math.max(0, Number(item.peratus) || 0);
-                    }, 0) || 1;
-
-                ctx.fillStyle = "#ffffff";
-                ctx.strokeStyle = "#1f2937";
-                ctx.lineWidth = 1.2;
-                ctx.fillRect(x, y, w, h);
-                ctx.strokeRect(x, y, w, h);
-
-                ctx.fillStyle = "#eef4f7";
-                ctx.fillRect(x, y, w, titleH);
-                ctx.strokeRect(x, y, w, titleH);
-
-                ctx.fillStyle = "#111827";
-                ctx.font = "bold 15px Arial, sans-serif";
-                ctx.textAlign = "left";
-                ctx.textBaseline = "middle";
-                ctx.fillText(
-                    "PETUNJUK PEMBAHAGIAN WARIS",
-                    x + 12,
-                    y + titleH / 2
-                );
-
-                const headerY = y + titleH;
-                const tableW = w;
-                const cols = [
-                    { key: "no", label: "No.", width: 48 },
-                    { key: "name", label: "Nama Waris", width: 174 },
-                    { key: "share", label: "Saham", width: 92 },
-                    { key: "area", label: "Luas (m²)", width: 106 },
-                    { key: "status", label: "Status", width: tableW - (48 + 174 + 92 + 106) }
-                ];
-
-                ctx.fillStyle = "#f8fafc";
-                ctx.fillRect(x, headerY, w, headerH);
-                ctx.strokeStyle = "#94a3b8";
-                ctx.strokeRect(x, headerY, w, headerH);
-
-                let cx = x;
-                ctx.font = "bold 11px Arial, sans-serif";
-                ctx.fillStyle = "#111827";
-                ctx.textAlign = "center";
-
-                cols.forEach(function(col) {
-                    ctx.strokeRect(cx, headerY, col.width, headerH);
-                    ctx.fillText(col.label, cx + col.width / 2, headerY + headerH / 2);
-                    cx += col.width;
-                });
-
-                const bodyAvail = h - titleH - headerH - reserveH - bottomPad - 10;
-                const rows = Math.max(1, heirs.length);
-                const rowH = Math.max(32, Math.min(44, bodyAvail / rows));
-                let rowY = headerY + headerH;
-
-                heirs.forEach(function(waris, index) {
-                    const fractionRaw = Math.max(0, Number(waris.peratus) || 0);
-                    const fraction = fractionRaw / fractionSum;
-                    const area = usableArea * fraction;
-                    const values = [
-                        String(index + 1),
-                        String(waris.nama || ("Waris " + (index + 1))),
-                        (fraction * 100).toFixed(2) + "%",
-                        Number.isFinite(area) ? area.toFixed(2) : "-",
-                        "Diagihkan"
-                    ];
-
-                    if (index % 2 === 1) {
-                        ctx.fillStyle = "#fbfdfe";
-                        ctx.fillRect(x, rowY, w, rowH);
-                    }
-
-                    cx = x;
-                    cols.forEach(function(col, ci) {
-                        ctx.strokeStyle = "#cbd5e1";
-                        ctx.strokeRect(cx, rowY, col.width, rowH);
-                        ctx.fillStyle = "#111827";
-                        ctx.font = ci === 1 ? "bold 10.5px Arial, sans-serif" : "10px Arial, sans-serif";
-                        ctx.textAlign = ci === 1 ? "left" : "center";
-                        let text = values[ci];
-                        if (ci === 1 && text.length > 22) {
-                            text = text.substring(0, 21) + "…";
-                        }
-                        const tx = ci === 1 ? cx + 6 : cx + col.width / 2;
-                        ctx.fillText(text, tx, rowY + rowH / 2);
-                        cx += col.width;
-                    });
-
-                    rowY += rowH;
-                });
-
-                const reserveY = y + h - reserveH;
-                ctx.fillStyle = "#f8fafc";
-                ctx.strokeStyle = "#94a3b8";
-                ctx.fillRect(x, reserveY, w, reserveH);
-                ctx.strokeRect(x, reserveY, w, reserveH);
-
-                ctx.fillStyle = "#111827";
-                ctx.font = "bold 12px Arial, sans-serif";
-                ctx.textAlign = "left";
-                ctx.fillText("MAKLUMAT RIZAB JALAN", x + 12, reserveY + 18);
-
-                ctx.font = "10.5px Arial, sans-serif";
-                const reserveLength =
-                    roadInfo && roadInfo.widthM > 0
-                        ? (roadInfo.reserveArea / roadInfo.widthM)
-                        : 0;
-                const reserveLines = roadInfo ? [
-                    "Sisi rizab : " + roadInfo.side,
-                    "Lebar      : " + roadInfo.widthM.toFixed(2) + " m",
-                    "Panjang    : " + reserveLength.toFixed(2) + " m",
-                    "Luas       : " + roadInfo.reserveArea.toFixed(2) + " m²"
-                ] : [
-                    "Rizab jalan tidak dapat dibentuk daripada geometri lot."
-                ];
-
-                reserveLines.forEach(function(line, idx) {
-                    ctx.fillText(line, x + 14, reserveY + 39 + (idx * 15));
-                });
-
-                ctx.restore();
-            }
-
-
-            /*
-             * Caption.
-             */
+            /* Bingkai kawasan lot. */
             ctx.save();
-            ctx.fillStyle = "#111";
-            ctx.font = "bold 14px Arial, sans-serif";
-            ctx.textAlign = "left";
-
-            ctx.fillText(
-                "LOT ASAL " + meta.lot +
-                (
-                    meta.area
-                        ? "   •   " +
-                          meta.area.toFixed(3) +
-                          " m²"
-                        : ""
-                ),
-                drawing.x,
-                drawing.y - 28
+            ctx.strokeStyle = "#d1d5db";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+                drawing.x - 10,
+                drawing.y - 10,
+                drawing.w + 20,
+                drawing.h + 20
             );
-
-            ctx.font = "10px Arial, sans-serif";
-
-            ctx.fillText(
-                "GARISAN LUAR = SEMPADAN LOT ASAL   |   NOMBOR 1, 2, 3... MERUJUK KEPADA JADUAL PETUNJUK DI SEBELAH KANAN",
-                drawing.x,
-                drawing.y - 11
-            );
-
-            if (roadInfo) {
-                ctx.fillText(
-                    "Rizab jalan dalam lot: " +
-                    roadInfo.widthM.toFixed(2) +
-                    " m • " +
-                    roadInfo.side +
-                    " • Baki boleh diagih ± " +
-                    roadInfo.usableArea.toFixed(2) +
-                    " m²",
-                    drawing.x,
-                    drawing.y + 6
-                );
-            }
-
-            ctx.fillStyle = "#111";
-            ctx.font = "bold 10px Arial, sans-serif";
-            ctx.textAlign = "right";
-
-            ctx.fillText(
-                "ORIENTASI: NORTH-UP",
-                drawing.x + drawing.w,
-                drawing.y - 11
-            );
-
             ctx.restore();
 
-            /*
-             * Rizab jalan DI DALAM lot.
-             */
+            /* Rizab jalan dilukis dahulu. Tiada label/kotak dalam lot. */
             drawRoadReserveInsideLot(
                 ctx,
                 roadInfo,
@@ -12968,114 +12463,124 @@ body.cover-active{
             );
 
             /*
-             * =========================================================
-             * PETAK WARIS 4 SISI
-             * =========================================================
+             * Bahagikan kawasan yang boleh diagih mengikut saham Faraid.
+             * Setiap bahagian menggunakan polygon sebenar.
              */
-            const baseQuad = getCleanDistributionQuad();
+            let lowerU = distributionGeometry.minU;
+            let cumulativeFraction = 0;
 
             const totalShareFraction =
                 senaraiWaris.reduce(function(sum, w) {
-                    return (
-                        sum +
-                        Math.max(
-                            0,
-                            Number(w.peratus) || 0
-                        )
-                    );
+                    return sum + Math.max(0, Number(w.peratus) || 0);
                 }, 0) || 1;
 
-            if (baseQuad && senaraiWaris.length) {
+            const tableRows = [];
 
-                let t0 = 0;
-                let cumulative = 0;
+            senaraiWaris.forEach(function(w, index) {
 
-                const L0 = baseQuad[0];
-                const R0 = baseQuad[1];
-                const R1 = baseQuad[2];
-                const L1 = baseQuad[3];
+                const rawFraction = Math.max(0, Number(w.peratus) || 0);
+                const fraction = rawFraction / totalShareFraction;
+                const isLast = index === senaraiWaris.length - 1;
 
-                senaraiWaris.forEach(function(w, index) {
+                let upperU;
 
-                    const f =
-                        Math.max(
-                            0,
-                            Number(w.peratus) || 0
-                        ) / totalShareFraction;
+                if (isLast) {
+                    upperU = distributionGeometry.maxU;
+                } else {
+                    cumulativeFraction += fraction;
 
-                    cumulative += f;
+                    const targetArea =
+                        distributionGeometry.totalArea *
+                        Math.min(1, cumulativeFraction);
 
-                    const isLast =
-                        index === senaraiWaris.length - 1;
+                    upperU = findAreaCut(
+                        distributionGeometry.rings,
+                        targetArea,
+                        distributionGeometry.minU,
+                        distributionGeometry.maxU,
+                        distributionGeometry.totalArea
+                    );
+                }
 
-                    const t1 =
-                        isLast
-                            ? 1
-                            : findQuadCutT(
-                                baseQuad,
-                                Math.min(1, cumulative)
-                            );
+                const pieceRings =
+                    getPieceRings(
+                        distributionGeometry,
+                        lowerU,
+                        upperU
+                    );
 
-                    const leftA = lerpPoint(L0, L1, t0);
-                    const rightA = lerpPoint(R0, R1, t0);
-                    const rightB = lerpPoint(R0, R1, t1);
-                    const leftB = lerpPoint(L0, L1, t1);
-
-                    const quad = [
-                        leftA,
-                        rightA,
-                        rightB,
-                        leftB
-                    ];
-
-                    /*
-                     * Isi hatch ringan sahaja.
-                     */
-                    paDrawHatch(
+                /* Isi sangat ringan supaya sempadan masih jelas. */
+                pieceRings.forEach(function(ring) {
+                    drawPolygonPath(
                         ctx,
-                        quad,
+                        ring,
                         geometry,
                         scale,
                         offsetX,
-                        offsetY,
-                        index
+                        offsetY
                     );
 
-                    drawQuadPath(quad);
+                    ctx.fillStyle =
+                        index % 2 === 0
+                            ? "rgba(248,250,252,0.86)"
+                            : "rgba(241,245,249,0.86)";
+                    ctx.fill();
 
-                    ctx.strokeStyle = "#374151";
-                    ctx.lineWidth = 1.25;
+                    ctx.strokeStyle = "#64748b";
+                    ctx.lineWidth = 1.2;
                     ctx.stroke();
-                    /*
-                     * Di dalam lot hanya paparkan nombor ringkas.
-                     * Semua maklumat waris diletakkan di luar lot
-                     * dalam jadual petunjuk di sebelah kanan.
-                     */
+                });
+
+                /* HANYA nombor bahagian di dalam lot. */
+                const centroid = getPieceCentroid(pieceRings);
+
+                if (centroid) {
+                    const cx =
+                        offsetX +
+                        (centroid.u - geometry.minU) *
+                        scale;
+
+                    const cy =
+                        offsetY +
+                        (geometry.maxV - centroid.v) *
+                        scale;
+
                     ctx.save();
                     ctx.beginPath();
-                    ctx.fillStyle = "rgba(255,255,255,.96)";
-                    ctx.strokeStyle = "#475569";
-                    ctx.lineWidth = 1;
-                    ctx.arc(cp.x, cp.y, 15, 0, Math.PI * 2);
+                    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+                    ctx.fillStyle = "#ffffff";
                     ctx.fill();
+                    ctx.strokeStyle = "#334155";
+                    ctx.lineWidth = 1.2;
                     ctx.stroke();
 
                     ctx.fillStyle = "#111827";
-                    ctx.font = "bold 12px Arial, sans-serif";
+                    ctx.font = "bold 13px Arial, sans-serif";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
-                    ctx.fillText(String(index + 1), cp.x, cp.y + 0.5);
+                    ctx.fillText(String(index + 1), cx, cy + 0.5);
                     ctx.restore();
+                }
 
-                    t0 = t1;
+                const physicalArea =
+                    distributionGeometry.totalArea *
+                    fraction;
+
+                tableRows.push({
+                    no: index + 1,
+                    nama: String(w.nama || ("Waris " + (index + 1))),
+                    nisbah: w.nisbahText || "-",
+                    peratus: (fraction * 100).toFixed(2) + "%",
+                    luas: Number.isFinite(physicalArea)
+                        ? physicalArea.toFixed(2) + " m²"
+                        : "-"
                 });
-            }
 
-            /*
-             * Garisan luar lot asal dibuat paling jelas.
-             */
+                lowerU = upperU;
+            });
+
+            /* Sempadan lot asal paling tebal. */
             geometry.rings.forEach(function(ring) {
-
                 drawPolygonPath(
                     ctx,
                     ring,
@@ -13085,14 +12590,12 @@ body.cover-active{
                     offsetY
                 );
 
-                ctx.strokeStyle = "#000";
+                ctx.strokeStyle = "#111827";
                 ctx.lineWidth = 2.6;
                 ctx.stroke();
             });
 
-            /*
-             * Bearing + jarak pada SETIAP sisi sempadan lot asal.
-             */
+            /* Bearing dan jarak masih di luar garisan sempadan. */
             paDrawBoundaryAnnotations(
                 ctx,
                 geoRings,
@@ -13102,75 +12605,275 @@ body.cover-active{
                 offsetY
             );
 
-            /*
-             * Jadual ringkas di sebelah lot.
-             */
-            drawHeirSummaryTable(
-                tableBox.x,
-                tableBox.y,
-                tableBox.w,
-                tableBox.h,
-                senaraiWaris,
-                meta.distributableArea
-            );
+            /* ---------- JADUAL PETUNJUK DI LUAR LOT ---------- */
+            function drawLegendTable() {
 
-            /*
-             * Skala grafik.
-             */
+                const x = legend.x;
+                const y = legend.y;
+                const w = legend.w;
+                const h = legend.h;
+
+                const titleH = 42;
+                const headerH = 34;
+                const roadH = 125;
+
+                ctx.save();
+
+                ctx.fillStyle = "#ffffff";
+                ctx.strokeStyle = "#475569";
+                ctx.lineWidth = 1.1;
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeRect(x, y, w, h);
+
+                /* Tajuk jadual */
+                ctx.fillStyle = "#e2e8f0";
+                ctx.fillRect(x, y, w, titleH);
+                ctx.strokeRect(x, y, w, titleH);
+
+                ctx.fillStyle = "#0f172a";
+                ctx.font = "bold 15px Arial, sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(
+                    "PETUNJUK PEMBAHAGIAN WARIS",
+                    x + w / 2,
+                    y + titleH / 2
+                );
+
+                /* Lebar kolum */
+                const colWidths = [
+                    42,   // No.
+                    155,  // Waris
+                    88,   // Saham
+                    88,   // Peratus
+                    w - (42 + 155 + 88 + 88) // Luas
+                ];
+
+                const headers = [
+                    "No.",
+                    "Waris",
+                    "Saham",
+                    "Peratus",
+                    "Luas"
+                ];
+
+                const headerY = y + titleH;
+
+                ctx.fillStyle = "#f8fafc";
+                ctx.fillRect(x, headerY, w, headerH);
+
+                let px = x;
+
+                ctx.font = "bold 10.5px Arial, sans-serif";
+                ctx.fillStyle = "#111827";
+
+                headers.forEach(function(label, i) {
+                    ctx.strokeStyle = "#94a3b8";
+                    ctx.strokeRect(
+                        px,
+                        headerY,
+                        colWidths[i],
+                        headerH
+                    );
+
+                    ctx.textAlign = "center";
+                    ctx.fillText(
+                        label,
+                        px + colWidths[i] / 2,
+                        headerY + headerH / 2
+                    );
+
+                    px += colWidths[i];
+                });
+
+                const bodyHeight =
+                    h - titleH - headerH - roadH - 16;
+
+                const rowH =
+                    Math.max(
+                        34,
+                        Math.min(
+                            48,
+                            bodyHeight /
+                            Math.max(1, tableRows.length)
+                        )
+                    );
+
+                let rowY = headerY + headerH;
+
+                tableRows.forEach(function(row, rIndex) {
+
+                    if (
+                        rowY + rowH >
+                        y + h - roadH - 10
+                    ) {
+                        return;
+                    }
+
+                    if (rIndex % 2 === 1) {
+                        ctx.fillStyle = "#f8fafc";
+                        ctx.fillRect(x, rowY, w, rowH);
+                    }
+
+                    const values = [
+                        String(row.no),
+                        row.nama,
+                        row.nisbah,
+                        row.peratus,
+                        row.luas
+                    ];
+
+                    px = x;
+
+                    values.forEach(function(value, i) {
+
+                        ctx.strokeStyle = "#cbd5e1";
+                        ctx.strokeRect(
+                            px,
+                            rowY,
+                            colWidths[i],
+                            rowH
+                        );
+
+                        ctx.fillStyle = "#111827";
+                        ctx.font =
+                            i === 1
+                                ? "bold 10.5px Arial, sans-serif"
+                                : "10px Arial, sans-serif";
+
+                        ctx.textAlign =
+                            i === 1
+                                ? "left"
+                                : "center";
+
+                        let text = String(value);
+
+                        if (
+                            i === 1 &&
+                            text.length > 20
+                        ) {
+                            text =
+                                text.substring(0, 19) +
+                                "…";
+                        }
+
+                        const tx =
+                            i === 1
+                                ? px + 7
+                                : px +
+                                  colWidths[i] / 2;
+
+                        ctx.fillText(
+                            text,
+                            tx,
+                            rowY + rowH / 2
+                        );
+
+                        px += colWidths[i];
+                    });
+
+                    rowY += rowH;
+                });
+
+                /* ---------- MAKLUMAT RIZAB JALAN ---------- */
+                const roadY = y + h - roadH;
+
+                ctx.fillStyle = "#eff6ff";
+                ctx.fillRect(
+                    x,
+                    roadY,
+                    w,
+                    roadH
+                );
+
+                ctx.strokeStyle = "#93c5fd";
+                ctx.strokeRect(
+                    x,
+                    roadY,
+                    w,
+                    roadH
+                );
+
+                ctx.fillStyle = "#0f172a";
+                ctx.textAlign = "left";
+                ctx.font =
+                    "bold 12px Arial, sans-serif";
+
+                ctx.fillText(
+                    "MAKLUMAT RIZAB JALAN",
+                    x + 12,
+                    roadY + 20
+                );
+
+                ctx.font =
+                    "10.5px Arial, sans-serif";
+
+                if (roadInfo) {
+
+                    const roadLength =
+                        roadInfo.widthM > 0
+                            ? roadInfo.reserveArea /
+                              roadInfo.widthM
+                            : 0;
+
+                    const lines = [
+                        "Sisi       : " +
+                            roadInfo.side,
+                        "Lebar      : " +
+                            roadInfo.widthM.toFixed(2) +
+                            " m",
+                        "Panjang    : " +
+                            roadLength.toFixed(2) +
+                            " m",
+                        "Luas       : " +
+                            roadInfo.reserveArea.toFixed(2) +
+                            " m²",
+                        "Baki agih  : " +
+                            roadInfo.usableArea.toFixed(2) +
+                            " m²"
+                    ];
+
+                    lines.forEach(function(line, i) {
+                        ctx.fillText(
+                            line,
+                            x + 14,
+                            roadY + 42 + i * 16
+                        );
+                    });
+
+                } else {
+                    ctx.fillText(
+                        "Rizab jalan tidak dapat dibentuk daripada geometri lot.",
+                        x + 14,
+                        roadY + 45
+                    );
+                }
+
+                ctx.restore();
+            }
+
+            drawLegendTable();
+
+            /* Skala grafik bawah kawasan lot. */
             paDrawScaleBar(
                 ctx,
                 drawing.x,
-                674,
+                815,
                 scale,
                 185
             );
 
             ctx.save();
-
-            ctx.fillStyle = "#111";
-            ctx.font = "11px Arial, sans-serif";
+            ctx.fillStyle = "#64748b";
+            ctx.font = "9.5px Arial, sans-serif";
             ctx.textAlign = "left";
-
             ctx.fillText(
-                roadInfo
-                    ? (
-                        "Rizab jalan: " +
-                        roadInfo.widthM.toFixed(2) +
-                        " m • " +
-                        roadInfo.side +
-                        " • " +
-                        roadInfo.source +
-                        " • " +
-                        roadInfo.reference
-                    )
-                    : "Rizab jalan tidak dapat dibentuk daripada geometri lot.",
-                drawing.x,
-                714
+                "Nota: Semua maklumat waris dipindahkan ke jadual petunjuk supaya kawasan lot kekal jelas.",
+                50,
+                885
             );
-
-            ctx.font = "11px Arial, sans-serif";
-            ctx.textAlign = "right";
-
-            ctx.fillText(
-                "Bearing / jarak: anggaran geometri WebGIS",
-                drawing.x + drawing.w,
-                683
-            );
-
             ctx.restore();
-
-            /*
-             * Blok maklumat bawah asal dikekalkan.
-             */
-            paDrawBottomTitleBlock(
-                ctx,
-                W,
-                H,
-                meta,
-                senaraiWaris
-            );
         }
-
 
 
     /* =========================================================
