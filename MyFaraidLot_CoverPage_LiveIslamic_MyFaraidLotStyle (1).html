@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <title>MyFaraidLot - Web Pengiraan dan Pembahagian Lot Tanah</title>
-<!-- VERSI PELAN KEMAS: label waris dipindahkan keluar lot -->
+<!-- MYFARAIDLOT PELAN KEMAS 4.0 -->
 
     <!-- CSS Resources -->
     <link rel="stylesheet" href="css/leaflet.css">
@@ -11136,13 +11136,7 @@ body.cover-active{
             offsetX,
             offsetY
         ) {
-            if (
-                !roadInfo ||
-                !roadInfo.reserveRings ||
-                !roadInfo.reserveRings.length
-            ) {
-                return;
-            }
+            if (!roadInfo || !roadInfo.reserveRings || !roadInfo.reserveRings.length) return;
 
             ctx.save();
 
@@ -11156,7 +11150,7 @@ body.cover-active{
                     offsetY
                 );
 
-                ctx.fillStyle = "rgba(203, 213, 225, 0.72)";
+                ctx.fillStyle = "rgba(203,213,225,0.72)";
                 ctx.fill();
 
                 ctx.strokeStyle = "#2563eb";
@@ -12341,20 +12335,6 @@ body.cover-active{
             const canvas = document.getElementById("lotCanvas");
             if (!canvas) return;
 
-            /*
-             * =========================================================
-             * PELAN LOT KEMAS
-             * =========================================================
-             * Dalam lot:
-             * - sempadan lot
-             * - garisan pembahagian
-             * - nombor 1, 2, 3...
-             * - rizab jalan (tanpa kotak teks)
-             *
-             * Di luar lot:
-             * - jadual petunjuk waris
-             * - maklumat rizab jalan
-             */
             canvas.width = 1400;
             canvas.height = 920;
 
@@ -12376,7 +12356,6 @@ body.cover-active{
             }
 
             const roadInfo = createRoadReserveGeometry(geometry, selectedLayer);
-
             const distributionGeometry =
                 roadInfo && roadInfo.usableGeometry
                     ? roadInfo.usableGeometry
@@ -12388,42 +12367,42 @@ body.cover-active{
             meta.roadReserveSide = roadInfo ? roadInfo.side : "-";
             meta.roadReserveSource = roadInfo ? roadInfo.source : "-";
 
-            /* ---------- TAJUK ---------- */
+            /* ===== TAJUK ===== */
             ctx.save();
-            ctx.fillStyle = "#111827";
+            ctx.fillStyle = "#0f172a";
             ctx.textAlign = "left";
-            ctx.font = "bold 20px Arial, sans-serif";
-            ctx.fillText("PELAN PEMBAHAGIAN LOT FARAID", 50, 45);
+            ctx.font = "bold 21px Arial, sans-serif";
+            ctx.fillText("PELAN PEMBAHAGIAN LOT FARAID", 48, 42);
 
             ctx.font = "11px Arial, sans-serif";
             ctx.fillStyle = "#475569";
             ctx.fillText(
                 "Lot " + meta.lot +
                 (meta.area ? "  •  Luas asal " + meta.area.toFixed(2) + " m²" : ""),
-                50,
-                67
+                48,
+                64
             );
 
-            ctx.fillText(
-                "Nombor di dalam lot merujuk kepada jadual petunjuk di sebelah kanan.",
-                50,
-                86
-            );
+            /* Penanda ini sengaja dipaparkan supaya pengguna boleh sahkan
+               fail baharu benar-benar sedang dibuka. */
+            ctx.fillStyle = "#0f766e";
+            ctx.font = "bold 10px Arial, sans-serif";
+            ctx.fillText("VERSI PAPARAN KEMAS 4.0", 48, 84);
             ctx.restore();
 
-            /* ---------- SUSUN ATUR ---------- */
+            /* ===== SUSUN ATUR: LOT KIRI, JADUAL KANAN ===== */
             const drawing = {
                 x: 55,
-                y: 125,
-                w: 760,
-                h: 640
+                y: 120,
+                w: 745,
+                h: 650
             };
 
-            const legend = {
-                x: 855,
-                y: 125,
-                w: 490,
-                h: 640
+            const table = {
+                x: 845,
+                y: 120,
+                w: 505,
+                h: 650
             };
 
             const geomWidth = geometry.maxU - geometry.minU;
@@ -12437,10 +12416,14 @@ body.cover-active{
             const drawWidth = geomWidth * scale;
             const drawHeight = geomHeight * scale;
 
-            const offsetX = drawing.x + (drawing.w - drawWidth) / 2;
-            const offsetY = drawing.y + (drawing.h - drawHeight) / 2;
+            const offsetX =
+                drawing.x +
+                (drawing.w - drawWidth) / 2;
 
-            /* Bingkai kawasan lot. */
+            const offsetY =
+                drawing.y +
+                (drawing.h - drawHeight) / 2;
+
             ctx.save();
             ctx.strokeStyle = "#d1d5db";
             ctx.lineWidth = 1;
@@ -12452,7 +12435,7 @@ body.cover-active{
             );
             ctx.restore();
 
-            /* Rizab jalan dilukis dahulu. Tiada label/kotak dalam lot. */
+            /* Rizab jalan: kawasan sahaja. Tiada kotak teks dalam lot. */
             drawRoadReserveInsideLot(
                 ctx,
                 roadInfo,
@@ -12462,10 +12445,6 @@ body.cover-active{
                 offsetY
             );
 
-            /*
-             * Bahagikan kawasan yang boleh diagih mengikut saham Faraid.
-             * Setiap bahagian menggunakan polygon sebenar.
-             */
             let lowerU = distributionGeometry.minU;
             let cumulativeFraction = 0;
 
@@ -12474,13 +12453,18 @@ body.cover-active{
                     return sum + Math.max(0, Number(w.peratus) || 0);
                 }, 0) || 1;
 
-            const tableRows = [];
+            const rows = [];
 
             senaraiWaris.forEach(function(w, index) {
 
-                const rawFraction = Math.max(0, Number(w.peratus) || 0);
-                const fraction = rawFraction / totalShareFraction;
-                const isLast = index === senaraiWaris.length - 1;
+                const rawFraction =
+                    Math.max(0, Number(w.peratus) || 0);
+
+                const fraction =
+                    rawFraction / totalShareFraction;
+
+                const isLast =
+                    index === senaraiWaris.length - 1;
 
                 let upperU;
 
@@ -12493,13 +12477,14 @@ body.cover-active{
                         distributionGeometry.totalArea *
                         Math.min(1, cumulativeFraction);
 
-                    upperU = findAreaCut(
-                        distributionGeometry.rings,
-                        targetArea,
-                        distributionGeometry.minU,
-                        distributionGeometry.maxU,
-                        distributionGeometry.totalArea
-                    );
+                    upperU =
+                        findAreaCut(
+                            distributionGeometry.rings,
+                            targetArea,
+                            distributionGeometry.minU,
+                            distributionGeometry.maxU,
+                            distributionGeometry.totalArea
+                        );
                 }
 
                 const pieceRings =
@@ -12509,8 +12494,9 @@ body.cover-active{
                         upperU
                     );
 
-                /* Isi sangat ringan supaya sempadan masih jelas. */
+                /* Bahagian waris: hanya fill lembut + garisan sempadan. */
                 pieceRings.forEach(function(ring) {
+
                     drawPolygonPath(
                         ctx,
                         ring,
@@ -12522,19 +12508,21 @@ body.cover-active{
 
                     ctx.fillStyle =
                         index % 2 === 0
-                            ? "rgba(248,250,252,0.86)"
-                            : "rgba(241,245,249,0.86)";
+                            ? "rgba(248,250,252,.86)"
+                            : "rgba(241,245,249,.86)";
                     ctx.fill();
 
                     ctx.strokeStyle = "#64748b";
-                    ctx.lineWidth = 1.2;
+                    ctx.lineWidth = 1.15;
                     ctx.stroke();
                 });
 
-                /* HANYA nombor bahagian di dalam lot. */
-                const centroid = getPieceCentroid(pieceRings);
+                /* HANYA nombor di dalam bahagian. */
+                const centroid =
+                    getPieceCentroid(pieceRings);
 
                 if (centroid) {
+
                     const cx =
                         offsetX +
                         (centroid.u - geometry.minU) *
@@ -12558,7 +12546,11 @@ body.cover-active{
                     ctx.font = "bold 13px Arial, sans-serif";
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
-                    ctx.fillText(String(index + 1), cx, cy + 0.5);
+                    ctx.fillText(
+                        String(index + 1),
+                        cx,
+                        cy + 0.5
+                    );
                     ctx.restore();
                 }
 
@@ -12566,20 +12558,21 @@ body.cover-active{
                     distributionGeometry.totalArea *
                     fraction;
 
-                tableRows.push({
+                rows.push({
                     no: index + 1,
                     nama: String(w.nama || ("Waris " + (index + 1))),
-                    nisbah: w.nisbahText || "-",
+                    saham: w.nisbahText || "-",
                     peratus: (fraction * 100).toFixed(2) + "%",
-                    luas: Number.isFinite(physicalArea)
-                        ? physicalArea.toFixed(2) + " m²"
-                        : "-"
+                    luas:
+                        Number.isFinite(physicalArea)
+                            ? physicalArea.toFixed(2) + " m²"
+                            : "-"
                 });
 
                 lowerU = upperU;
             });
 
-            /* Sempadan lot asal paling tebal. */
+            /* Sempadan lot asal. */
             geometry.rings.forEach(function(ring) {
                 drawPolygonPath(
                     ctx,
@@ -12595,7 +12588,7 @@ body.cover-active{
                 ctx.stroke();
             });
 
-            /* Bearing dan jarak masih di luar garisan sempadan. */
+            /* Bearing dan jarak kekal di luar lot. */
             paDrawBoundaryAnnotations(
                 ctx,
                 geoRings,
@@ -12605,17 +12598,17 @@ body.cover-active{
                 offsetY
             );
 
-            /* ---------- JADUAL PETUNJUK DI LUAR LOT ---------- */
-            function drawLegendTable() {
+            /* ===== JADUAL PETUNJUK WARIS DI LUAR LOT ===== */
+            (function drawOutsideTable() {
 
-                const x = legend.x;
-                const y = legend.y;
-                const w = legend.w;
-                const h = legend.h;
+                const x = table.x;
+                const y = table.y;
+                const w = table.w;
+                const h = table.h;
 
                 const titleH = 42;
-                const headerH = 34;
-                const roadH = 125;
+                const headerH = 36;
+                const reserveH = 145;
 
                 ctx.save();
 
@@ -12625,7 +12618,6 @@ body.cover-active{
                 ctx.fillRect(x, y, w, h);
                 ctx.strokeRect(x, y, w, h);
 
-                /* Tajuk jadual */
                 ctx.fillStyle = "#e2e8f0";
                 ctx.fillRect(x, y, w, titleH);
                 ctx.strokeRect(x, y, w, titleH);
@@ -12640,13 +12632,12 @@ body.cover-active{
                     y + titleH / 2
                 );
 
-                /* Lebar kolum */
-                const colWidths = [
-                    42,   // No.
-                    155,  // Waris
-                    88,   // Saham
-                    88,   // Peratus
-                    w - (42 + 155 + 88 + 88) // Luas
+                const colW = [
+                    42,
+                    168,
+                    86,
+                    91,
+                    w - (42 + 168 + 86 + 91)
                 ];
 
                 const headers = [
@@ -12664,74 +12655,83 @@ body.cover-active{
 
                 let px = x;
 
-                ctx.font = "bold 10.5px Arial, sans-serif";
-                ctx.fillStyle = "#111827";
-
                 headers.forEach(function(label, i) {
                     ctx.strokeStyle = "#94a3b8";
                     ctx.strokeRect(
                         px,
                         headerY,
-                        colWidths[i],
+                        colW[i],
                         headerH
                     );
 
+                    ctx.fillStyle = "#111827";
+                    ctx.font = "bold 10.5px Arial, sans-serif";
                     ctx.textAlign = "center";
                     ctx.fillText(
                         label,
-                        px + colWidths[i] / 2,
+                        px + colW[i] / 2,
                         headerY + headerH / 2
                     );
 
-                    px += colWidths[i];
+                    px += colW[i];
                 });
 
-                const bodyHeight =
-                    h - titleH - headerH - roadH - 16;
+                const availableRowsH =
+                    h -
+                    titleH -
+                    headerH -
+                    reserveH -
+                    15;
 
                 const rowH =
                     Math.max(
                         34,
                         Math.min(
                             48,
-                            bodyHeight /
-                            Math.max(1, tableRows.length)
+                            availableRowsH /
+                            Math.max(1, rows.length)
                         )
                     );
 
-                let rowY = headerY + headerH;
+                let rowY =
+                    headerY + headerH;
 
-                tableRows.forEach(function(row, rIndex) {
+                rows.forEach(function(row, ri) {
 
                     if (
                         rowY + rowH >
-                        y + h - roadH - 10
+                        y + h - reserveH - 8
                     ) {
                         return;
                     }
 
-                    if (rIndex % 2 === 1) {
+                    if (ri % 2 === 1) {
                         ctx.fillStyle = "#f8fafc";
-                        ctx.fillRect(x, rowY, w, rowH);
+                        ctx.fillRect(
+                            x,
+                            rowY,
+                            w,
+                            rowH
+                        );
                     }
 
-                    const values = [
+                    const vals = [
                         String(row.no),
                         row.nama,
-                        row.nisbah,
+                        row.saham,
                         row.peratus,
                         row.luas
                     ];
 
                     px = x;
 
-                    values.forEach(function(value, i) {
+                    vals.forEach(function(val, i) {
 
                         ctx.strokeStyle = "#cbd5e1";
                         ctx.strokeRect(
                             px,
                             rowY,
-                            colWidths[i],
+                            colW[i],
                             rowH
                         );
 
@@ -12746,22 +12746,21 @@ body.cover-active{
                                 ? "left"
                                 : "center";
 
-                        let text = String(value);
+                        let text = String(val);
 
                         if (
                             i === 1 &&
-                            text.length > 20
+                            text.length > 22
                         ) {
                             text =
-                                text.substring(0, 19) +
+                                text.substring(0, 21) +
                                 "…";
                         }
 
                         const tx =
                             i === 1
                                 ? px + 7
-                                : px +
-                                  colWidths[i] / 2;
+                                : px + colW[i] / 2;
 
                         ctx.fillText(
                             text,
@@ -12769,21 +12768,22 @@ body.cover-active{
                             rowY + rowH / 2
                         );
 
-                        px += colWidths[i];
+                        px += colW[i];
                     });
 
                     rowY += rowH;
                 });
 
-                /* ---------- MAKLUMAT RIZAB JALAN ---------- */
-                const roadY = y + h - roadH;
+                /* Maklumat rizab jalan turut dipindahkan keluar lot. */
+                const roadY =
+                    y + h - reserveH;
 
                 ctx.fillStyle = "#eff6ff";
                 ctx.fillRect(
                     x,
                     roadY,
                     w,
-                    roadH
+                    reserveH
                 );
 
                 ctx.strokeStyle = "#93c5fd";
@@ -12791,22 +12791,19 @@ body.cover-active{
                     x,
                     roadY,
                     w,
-                    roadH
+                    reserveH
                 );
 
                 ctx.fillStyle = "#0f172a";
+                ctx.font = "bold 12px Arial, sans-serif";
                 ctx.textAlign = "left";
-                ctx.font =
-                    "bold 12px Arial, sans-serif";
-
                 ctx.fillText(
                     "MAKLUMAT RIZAB JALAN",
-                    x + 12,
-                    roadY + 20
+                    x + 13,
+                    roadY + 22
                 );
 
-                ctx.font =
-                    "10.5px Arial, sans-serif";
+                ctx.font = "10.5px Arial, sans-serif";
 
                 if (roadInfo) {
 
@@ -12816,61 +12813,50 @@ body.cover-active{
                               roadInfo.widthM
                             : 0;
 
-                    const lines = [
-                        "Sisi       : " +
-                            roadInfo.side,
-                        "Lebar      : " +
-                            roadInfo.widthM.toFixed(2) +
-                            " m",
-                        "Panjang    : " +
-                            roadLength.toFixed(2) +
-                            " m",
-                        "Luas       : " +
-                            roadInfo.reserveArea.toFixed(2) +
-                            " m²",
-                        "Baki agih  : " +
-                            roadInfo.usableArea.toFixed(2) +
-                            " m²"
+                    const roadLines = [
+                        "Sisi        : " + roadInfo.side,
+                        "Lebar       : " + roadInfo.widthM.toFixed(2) + " m",
+                        "Panjang     : " + roadLength.toFixed(2) + " m",
+                        "Luas rizab  : " + roadInfo.reserveArea.toFixed(2) + " m²",
+                        "Baki agih   : " + roadInfo.usableArea.toFixed(2) + " m²"
                     ];
 
-                    lines.forEach(function(line, i) {
+                    roadLines.forEach(function(line, i) {
                         ctx.fillText(
                             line,
-                            x + 14,
-                            roadY + 42 + i * 16
+                            x + 15,
+                            roadY + 47 + i * 17
                         );
                     });
 
                 } else {
                     ctx.fillText(
-                        "Rizab jalan tidak dapat dibentuk daripada geometri lot.",
-                        x + 14,
-                        roadY + 45
+                        "Rizab jalan tidak dapat dibentuk.",
+                        x + 15,
+                        roadY + 49
                     );
                 }
 
                 ctx.restore();
-            }
 
-            drawLegendTable();
+            })();
 
-            /* Skala grafik bawah kawasan lot. */
             paDrawScaleBar(
                 ctx,
                 drawing.x,
-                815,
+                820,
                 scale,
                 185
             );
 
             ctx.save();
             ctx.fillStyle = "#64748b";
-            ctx.font = "9.5px Arial, sans-serif";
+            ctx.font = "10px Arial, sans-serif";
             ctx.textAlign = "left";
             ctx.fillText(
-                "Nota: Semua maklumat waris dipindahkan ke jadual petunjuk supaya kawasan lot kekal jelas.",
-                50,
-                885
+                "Dalam lot hanya nombor bahagian dipaparkan. Semua butiran waris berada dalam jadual di sebelah kanan.",
+                48,
+                882
             );
             ctx.restore();
         }
